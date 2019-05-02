@@ -1,0 +1,288 @@
+<html>
+
+<head>
+    <meta charset=utf-8/>
+    <title>Stratus Desktop</title>
+    <script>window.$ = window.jQuery = require('jquery');</script>
+    <link rel="stylesheet" type="text/css" href="semantic/dist/semantic.min.css">
+    <script src="semantic/dist/semantic.min.js"></script>
+    <script src="app.js"></script>
+    <script src="vendor/tablesort.js"></script>
+    <script src="vendor/vue/vue.js"></script>
+</head>
+
+<body>
+<div class="ui container app">
+    <h1 class="ui header" style="margin-top: 14px;">
+        <i class="grey cloud icon"></i>
+        <div class="content">
+            Stratus
+            <div class="sub header">Searching VDC 2</div>
+        </div>
+    </h1>
+    <div class="ui inverted dimmer active main">
+        <div class="ui massive text loader">Please wait, loading....</div>
+    </div>
+    <div class="row setup" style="display: none;">
+        <h1>SETUP!</h1>
+        <form class="ui form">
+            <h2>Europe</h2>
+            <div class="field">
+                <label>CloudStack URL</label>
+                <input name="eu_cs_url" type="text">
+            </div>
+            <div class="field">
+                <label>CloudStack API Key</label>
+                <input name="eu_cs_key" type="text">
+            </div>
+            <div class="field">
+                <label>CloudStack API Secret</label>
+                <input name="eu_cs_secret" type="text">
+            </div>
+            <h2>USA</h2>
+            <div class="field">
+                <label>CloudStack URL</label>
+                <input name="us_cs_url" type="text">
+            </div>
+            <div class="field">
+                <label>CloudStack API Key</label>
+                <input name="us_cs_key" type="text">
+            </div>
+            <div class="field">
+                <label>CloudStack API Secret</label>
+                <input name="us_cs_secret" type="text">
+            </div>
+            <h2>Asia</h2>
+            <div class="field">
+                <label>CloudStack URL</label>
+                <input name="asia_cs_url" type="text">
+            </div>
+            <div class="field">
+                <label>CloudStack API Key</label>
+                <input name="asia_cs_key" type="text">
+            </div>
+            <div class="field">
+                <label>CloudStack API Secret</label>
+                <input name="asia_cs_secret" type="text">
+            </div>
+
+            <div class="ui submit button" onclick="saveConfig();">Save</div>
+            <div class="ui error message"></div>
+        </form>
+    </div>
+    <div id="search" class="row" style="display: none;">
+        <form onSubmit="return search();">
+            <div class="ui fluid icon input">
+                <input id="searchInput" placeholder="Enter parts of names or UUIDs" type="text">
+                <i class="search icon"></i>
+            </div>
+        </form>
+    </div>
+    <div class="ui row breadcrumb">
+        <div class="ui divider"></div>
+        <div class="section">Home</div>
+    </div>
+    <div class="row results">
+        <div class="ui divider"></div>
+        <table id="results_table" class="ui celled padded table">
+            <tbody id="results">
+            </tbody>
+        </table>
+    </div>
+    <div id="acctApp" class="row account">
+        <div class="ui divider"></div>
+        <h2 id="account_name">Account Name: {{ account.name }}</h2>
+        <h4 id="account_uuid">Account UUID: {{ account.id }}</h4>
+        <h4 id="account_domainid">Domain UUID: {{ account.domainid }} </h4>
+        <h4 id="account_domain_path">Domain Path: {{ domain.path }}</h4>
+        <div class="ui top attached tabular menu">
+            <a class="item active" data-tab="acct_1">Virtual Machines</a>
+            <a class="item" data-tab="acct_2">Networks</a>
+            <a class="item" data-tab="acct_3">Users</a>
+            <a class="item" data-tab="acct_4">Resources</a>
+        </div>
+        <div class="ui bottom attached tab segment active" data-tab="acct_1">
+            <div class="ui inverted inline dimmer vms">
+                <div class="ui small loader"></div>
+            </div>
+            <table id="vms_table" class="ui sortable celled table">
+                <thead>
+                <th class="sorted ascending">VM Name</th>
+                <th>CPU</th>
+                <th>RAM</th>
+                <th>Zone</th>
+                <th>State</th>
+                <th>Created</th>
+                <th></th>
+                </thead>
+                <tbody id="vms">
+                <tr v-for="vm in vms">
+                    <td>
+                        <a href="#" :onclick="vm.func_call">{{ vm.name }}</a>
+                    </td>
+                    <td>{{ vm.cpunumber }}</td>
+                    <td>{{ vm.memory }}</td>
+                    <td>{{ vm.zonename }}</td>
+                    <td>{{ vm.state }}</td>
+                    <td>{{ vm.created }}</td>
+                    <td v-html="vm.raw_data"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="ui bottom attached tab segment" data-tab="acct_2">
+            <div class="ui inverted inline dimmer networks">
+                <div class="ui small loader"></div>
+            </div>
+            <table id="networks_table" class="ui sortable celled table">
+                <thead>
+                <th class="sorted ascending">Network Name</th>
+                <th>Zone</th>
+                <th>Gateway</th>
+                <th>Netmask</th>
+                </thead>
+                <tbody id="networks">
+                <tr v-for="network in networks">
+                    <td>{{ network.displaytext }}</td>
+                    <td>{{ network.zonename }}</td>
+                    <td>{{ network.gateway }}</td>
+                    <td>{{ network.netmask }}</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="ui bottom attached tab segment" data-tab="acct_3">
+            <table id="users_table" class="ui sortable celled table">
+                <thead>
+                <th class="sorted ascending">Name</th>
+                <th>Email</th>
+                </thead>
+                <tbody id="users">
+                <tr v-for="user in users">
+                    <td>{{ user.firstname }} {{ user.lastname }}</td>
+                    <td>{{ user.email }}</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="ui bottom attached tab segment" data-tab="acct_4">
+            <table class="ui celled padded table">
+                <thead>
+                <th>Resource</th>
+                <th>Limit</th>
+                <th>Used</th>
+                <th>Available</th>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>CPU&nbsp;
+                        <i class="edit icon"></i>
+                    </td>
+                    <td>{{ account.cpulimit }}</td>
+                    <td>{{ account.cputotal }}</td>
+                    <td>{{ account.cpuavailable }}</td>
+                </tr>
+                <tr>
+                    <td>RAM</td>
+                    <td>{{ account.memorylimit }}</td>
+                    <td>{{ account.memorytotal / 1024 }}</td>
+                    <td>{{ account.memoryavailable }}</td>
+                </tr>
+                <tr>
+                    <td>Volumes</td>
+                    <td>{{ account.volumelimit }}</td>
+                    <td>{{ account.volumetotal }}</td>
+                    <td>{{ account.volumeavailable }}</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div id="vmApp" class="row virtualmachine">
+        <div class="ui divider"></div>
+        <h2>VM Details: {{ vm.name }} / {{ vm.instancename }} / {{ vm.zonename }}</h2>
+        <h4 style="margin-top: 5px; margin-bottom: 0px;">VM Spec: {{ vm.cpunumber }} CPUs, {{ vm.memory / 1024 }} GB
+            RAM</h4>
+        <h4 style="margin-top: 5px; margin-bottom: 0px;">VM UUID: {{ vm.id }}</h4>
+        <h4 style="margin-top: 5px; margin-bottom: 0px;">
+            <a id="vm_acct" href="#">Account Name: {{ vm.account }}</a>
+        </h4>
+        <div class="ui top attached tabular menu vm_tabs">
+            <a class="item active" data-tab="vm_1">Volumes</a>
+            <a class="item" data-tab="vm_2">Networks</a>
+        </div>
+        <div class="ui bottom attached tab segment active" data-tab="vm_1">
+            <table id="volumes_table" class="ui sortable celled table">
+                <thead>
+                <th class="sorted ascending">Name</th>
+                <th>Size</th>
+                <th>Datastore</th>
+                </thead>
+                <tbody id="volumes">
+                <tr v-for="volume in volumes">
+                    <td>{{ volume.name }}</td>
+                    <td>{{ volume.size / 1024 / 1024 }}</td>
+                    <td>{{ volume.storage }}</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="ui bottom attached tab segment" data-tab="vm_2">
+            <table id="nics_table" class="ui sortable celled table">
+                <thead>
+                <th class="sorted ascending">Network Name</th>
+                <th>MAC Address</th>
+                <th>IP Address</th>
+                <th>Netmask</th>
+                <th>Gateway</th>
+                </thead>
+                <tbody id="nics">
+                <tr v-for="nic in vm.nic">
+                    <td>{{ nic.networkname }}</td>
+                    <td>{{ nic.macaddress }}</td>
+                    <td>{{ nic.ipaddress }}</td>
+                    <td>{{ nic.netmask }}</td>
+                    <td>{{ nic.gateway }}</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<div id="scrolling_modal" class="ui longer modal scrolling transition hidden">
+    <div class="header">
+        Raw JSON
+    </div>
+    <div id="scrolling_modal_content" class="scrolling content">
+    </div>
+    <div class="actions">
+        <div class="ui primary approve button">
+            Close
+        </div>
+    </div>
+</div>
+<script>
+  var acctApp = new Vue({
+    el: '#acctApp',
+    data: {
+      account: "",
+      region: "",
+      vms: [],
+      networks: [],
+      users: [],
+      domain: "",
+    }
+  });
+
+  var vmApp = new Vue({
+    el: '#vmApp',
+    data: {
+      vm: "",
+      volumes: [],
+    }
+  });
+</script>
+<script>MainPage();</script>
+</body>
+
+</html>
